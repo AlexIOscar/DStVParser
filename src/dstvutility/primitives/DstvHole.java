@@ -1,18 +1,15 @@
-package Primitives;
+package dstvutility.primitives;
 
-import Misc.DStVParseEx;
+import dstvutility.miscellaneous.DstvParseEx;
+import dstvutility.parsercore.DstvComponentParser;
 
-public class DStVHole extends LocatedElem implements DStVElement {
+public class DstvHole extends LocatedElem implements DstvElement {
     final double diam;
     //0 if through
     final double depth;
-    //optional, for slots only
-    double slotLen;
-    double slotWidth;
-    double slotAng;
 
     //hole
-    public DStVHole(String flCode, double xCoord, double yCoord, double diam, double depth) {
+    public DstvHole(String flCode, double xCoord, double yCoord, double diam, double depth) {
         this.flCode = flCode;
         this.xCoord = xCoord;
         this.yCoord = yCoord;
@@ -29,25 +26,18 @@ public class DStVHole extends LocatedElem implements DStVElement {
         }
     }
 
-    //slot
-    public DStVHole(String flCode, double xCoord, double yCoord, double diam, double depth,
-                    double slotLen, double slotWidth, double slotAng) {
-        this(flCode, xCoord, yCoord, diam, depth);
-        this.slotLen = slotLen;
-        this.slotWidth = slotWidth;
-        this.slotAng = slotAng;
-    }
-
-    public static DStVHole createHole(String DStVSign) throws DStVParseEx {
-        String[] separated = DStVElement.getDataVector(DStVSign);
+    public static DstvHole createHole(String DStVSign) throws DstvParseEx {
+        String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.fineSplitter);
 
         //проверяем что первая лексема - валидный код фланца. Если нет, то будет получено исключение.
-        DStVElement.validateFlange(separated[0]);
+        DstvElement.validateFlange(separated[0]);
 
-        //удаляем все кроме чисел и разделительной точки
+        //удаляем все кроме чисел и разделительной точки, во всех блоках (кроме метки фланца)
         for (int i = 1; i < separated.length; i++) {
             separated[i] = separated[i].replaceAll("([^.\\d])", "");
         }
+
+        separated = DstvComponentParser.removeVoids(separated);
 
         double xCoord = Double.parseDouble(separated[1]);
         double yCoord = Double.parseDouble(separated[2]);
@@ -55,29 +45,26 @@ public class DStVHole extends LocatedElem implements DStVElement {
         double depth = Double.parseDouble(separated[4]);
 
         if (separated.length == 5) {
-            return new DStVHole(separated[0], xCoord, yCoord, diam, depth);
+            return new DstvHole(separated[0], xCoord, yCoord, diam, depth);
         }
 
         if (separated.length == 8) {
             double slotLen = Double.parseDouble(separated[5]);
             double slotWidth = Double.parseDouble(separated[6]);
             double slotAng = Double.parseDouble(separated[7]);
-            return new DStVHole(separated[0], xCoord, yCoord, diam, depth, slotLen, slotWidth, slotAng);
+            return new DstvSlot(separated[0], xCoord, yCoord, diam, depth, slotLen, slotWidth, slotAng);
         }
-        throw new DStVParseEx("Illegal data vector format (BO)");
+        throw new DstvParseEx("Illegal data vector format (BO)");
     }
 
     @Override
     public String toString() {
-        return  "DStVHole {" +
+        return "DStVHole {" +
                 "flCode='" + flCode + '\'' +
                 ", xCoord=" + xCoord +
                 ", yCoord=" + yCoord +
                 ", diam=" + diam +
                 ", depth=" + depth +
-                ", slotLen=" + slotLen +
-                ", slotWidth=" + slotWidth +
-                ", slotAng=" + slotAng +
                 '}';
     }
 }
