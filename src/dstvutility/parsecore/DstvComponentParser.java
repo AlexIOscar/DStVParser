@@ -1,9 +1,11 @@
-package dstvutility.parsercore;
+package dstvutility.parsecore;
 
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.primitives.DstvContourPoint;
 import dstvutility.primitives.DstvElement;
 import dstvutility.primitives.DstvHole;
+import dstvutility.primitives.DstvNumeration;
+import dstvutility.primitives.synthetic.Contour;
 
 import java.io.*;
 import java.util.*;
@@ -29,34 +31,53 @@ public class DstvComponentParser {
             }
         }
 
-        List<String> outerPointList = elemMap.get("AK");
+        List<String> outerPointSignList = elemMap.get("AK");
 
-        if (outerPointList != null) {
+        if (outerPointSignList != null) {
             int startPoint = outList.size();
-            for (String pointSigh : outerPointList) {
+            for (String pointSigh : outerPointSignList) {
                 try {
                     outList.add(DstvContourPoint.createPoint(pointSigh));
                 } catch (DstvParseEx DStV_parseEx) {
                     DStV_parseEx.printStackTrace();
-                    System.out.println(DStV_parseEx.getMessage());
                 }
             }
-            int endPoint = outList.size() - 1;
 
+            int endPoint = outList.size() - 1;
+            List<DstvContourPoint> contoursPoints = new ArrayList<>();
+            for (int i = startPoint; i <= endPoint; i++) {
+                contoursPoints.add((DstvContourPoint) outList.get(i));
+            }
+
+            try {
+                outList.addAll(Contour.createContList(contoursPoints, Contour.ContourType.AK));
+            } catch (DstvParseEx dstvParseEx) {
+                dstvParseEx.printStackTrace();
+            }
         }
 
+        List<String> numerationSignList = elemMap.get("SI");
+        if (numerationSignList != null) {
+            for (String numSigh : numerationSignList) {
+                try {
+                    outList.add(DstvNumeration.createNumeration(numSigh));
+                } catch (DstvParseEx DStV_parseEx) {
+                    DStV_parseEx.printStackTrace();
+                }
+            }
+        }
         return outList;
     }
 
     /**
-     * Получаем карту "тип элемента - набор data-line типа"
+     * Получаем карту "тип элемента - список data-line типа"
      *
      * @return
      */
     private Map<String, List<String>> getElemMap() {
         Map<String, List<String>> elemMap = new HashMap<>();
-        try (FileReader fr = new FileReader(file)) {
-            BufferedReader reader = new BufferedReader(fr);
+        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(file), "CP1251")) {
+            BufferedReader reader = new BufferedReader(isr);
 
             String curKey = null;
             String line = reader.readLine();
@@ -90,6 +111,7 @@ public class DstvComponentParser {
                 //получаем новую строку
                 line = reader.readLine();
             }
+            reader.close();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
@@ -108,15 +130,56 @@ public class DstvComponentParser {
                 "^E[0-9]$|^B[0-9]$|^S[0-9]$|^A[0-9]$|^I[0-9]$|^P[0-9]$|^K[0-9]$");
     }
 
+    /*
+    Список сплиттеров - экземпляров интерфейса, реализующих различные способы разделения входящей строки на лексемы,
+    и возвращающих их в виде массива строк
+     */
+
     /**
      * Splitter for full carefully splitting - saving all lexemes
      */
-    public static Splitter fineSplitter = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)| +");
+    public static Splitter fineSplitter = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)|(?<=[\\d\\w.]) +");
 
     /**
      * Splitter for rough splitting - delete letter-sequence lexemes between two digits (without additional spaces)
      */
     public static Splitter roughSplitter = str -> str.split("(?<!\\s|\\D)[a-z]+(?!\\s+|\\D)|\\s+");
+
+    public static Splitter positionNumSplitter = str -> {
+        List<String> outList = new ArrayList<>();
+        outList.add(str.substring(0, 2));
+        outList.add(str.substring(2, 3));
+        outList.add(str.substring(3, 15));
+        outList.add(str.substring(15, 25));
+        outList.add(str.substring(25, 31));
+        outList.add(str.substring(31, 35));
+        outList.add(str.substring(35, 36));
+        outList.add(str.substring(36));
+        String[] outStr = new String[0];
+        return outList.toArray(outStr);
+    };
+
+    /**
+     * Вытаскивает подстроки, представляющие числа, с фиксированным количеством знаков целого и десятичного
+     * представления от точки. Прототип, не доработан
+     */
+    private static Splitter dotSplitter = str -> {
+        int intDigits = 4;
+        int n = 3;
+        int[] dotPoss = new int[n];
+        for (int i = 0; i < n; i++) {
+            int prevPos = 0;
+            if (i > 0) {
+                prevPos = dotPoss[i - 1];
+            }
+            dotPoss[i] = str.indexOf(".", prevPos);
+        }
+        String[] outArr = new String[n];
+        for (int i = 0; i < n; i++) {
+            outArr[i] = str.substring(dotPoss[i] - intDigits, dotPoss[i] + 2);
+        }
+        return outArr;
+    };
 
     /**
      * кривовато... возможно потеря перформанса

@@ -1,9 +1,32 @@
 package dstvutility.primitives;
 
 public abstract class LocatedElem {
+
     protected String flCode;
-    protected double xCoord;
-    protected double yCoord;
+    protected final double xCoord;
+    protected final double yCoord;
+
+    public LocatedElem(String flCode, double xCoord, double yCoord) {
+        this.flCode = flCode;
+        this.xCoord = xCoord;
+        this.yCoord = yCoord;
+    }
+
+    public String getFlCode() {
+        return flCode;
+    }
+
+    public double getxCoord() {
+        return xCoord;
+    }
+
+    public double getyCoord() {
+        return yCoord;
+    }
+
+    public void setFlCode(String flCode) {
+        this.flCode = flCode;
+    }
 
     @Override
     public boolean equals(Object o) {

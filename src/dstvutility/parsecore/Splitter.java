@@ -1,4 +1,4 @@
-package dstvutility.parsercore;
+package dstvutility.parsecore;
 
 @FunctionalInterface
 public interface Splitter {

@@ -1,7 +1,7 @@
 package dstvutility.primitives;
 
 import dstvutility.miscellaneous.DstvParseEx;
-import dstvutility.parsercore.DstvComponentParser;
+import dstvutility.parsecore.DstvComponentParser;
 
 public class DstvHole extends LocatedElem implements DstvElement {
     final double diam;
@@ -10,9 +10,7 @@ public class DstvHole extends LocatedElem implements DstvElement {
 
     //hole
     public DstvHole(String flCode, double xCoord, double yCoord, double diam, double depth) {
-        this.flCode = flCode;
-        this.xCoord = xCoord;
-        this.yCoord = yCoord;
+        super(flCode, xCoord, yCoord);
         if (diam > 0) {
             this.diam = diam;
         } else {
@@ -28,16 +26,23 @@ public class DstvHole extends LocatedElem implements DstvElement {
 
     public static DstvHole createHole(String DStVSign) throws DstvParseEx {
         String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.fineSplitter);
+        separated[0] = separated[0].trim();
 
         //проверяем что первая лексема - валидный код фланца. Если нет, то будет получено исключение.
-        DstvElement.validateFlange(separated[0]);
+        if (!DstvElement.validateFlange(separated[0])) {
+            throw new DstvParseEx("Illegal flange code signature in BO data line");
+        }
 
         //удаляем все кроме чисел и разделительной точки, во всех блоках (кроме метки фланца)
         for (int i = 1; i < separated.length; i++) {
-            separated[i] = separated[i].replaceAll("([^.\\d])", "");
+            separated[i] = separated[i].replaceAll("([^.\\d-]+)", "");
         }
 
         separated = DstvComponentParser.removeVoids(separated);
+
+        if (separated.length < 5) {
+            throw new DstvParseEx("Illegal data vector format (BO): too short");
+        }
 
         double xCoord = Double.parseDouble(separated[1]);
         double yCoord = Double.parseDouble(separated[2]);
@@ -54,7 +59,7 @@ public class DstvHole extends LocatedElem implements DstvElement {
             double slotAng = Double.parseDouble(separated[7]);
             return new DstvSlot(separated[0], xCoord, yCoord, diam, depth, slotLen, slotWidth, slotAng);
         }
-        throw new DstvParseEx("Illegal data vector format (BO)");
+        throw new DstvParseEx("Illegal data vector format (BO): length not equals 5 or 8");
     }
 
     @Override

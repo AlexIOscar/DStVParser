@@ -2,11 +2,12 @@ package dstvutility.primitives.synthetic;
 
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.primitives.DstvContourPoint;
+import dstvutility.primitives.DstvElement;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Contour {
+public class Contour implements DstvElement {
 
     List<DstvContourPoint> pointList;
     ContourType type;
@@ -26,15 +27,37 @@ public class Contour {
         int lastIndex = 0;
 
         for (int i = 1; i < pointList.size(); i++) {
+            if (pointList.get(i).getFlCode().equals("x")) {
+                if (i == 0) {
+                    throw new DstvParseEx("First point of AK/IK block haven't flange mark, processing aborted");
+                }
+                if (i == firstIndex) {
+                    System.out.println("Warning: first point of contour haven't flange mark, mark will be taken " +
+                            "from previous contour");
+                }
+                pointList.get(i).setFlCode(pointList.get(i - 1).getFlCode());
+            }
+
             if (pointList.get(i).equals(first)) {
                 lastIndex = i;
-                outList.add(new Contour(pointList.subList(firstIndex, lastIndex), type));
-                firstIndex = i++;
+                outList.add(new Contour(pointList.subList(firstIndex, lastIndex + 1), type));
+                firstIndex = ++i;
+                //if pointer out of list bound:
+                if (firstIndex == pointList.size()) {
+                    break;
+                }
                 first = pointList.get(firstIndex);
             }
         }
-
         return outList;
+    }
+
+    @Override
+    public String toString() {
+        return "Contour{" +
+                "pointListSize=" + pointList.size() +
+                ", type=" + type +
+                '}';
     }
 
     public enum ContourType {
