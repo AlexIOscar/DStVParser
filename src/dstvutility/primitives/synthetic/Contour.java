@@ -20,8 +20,14 @@ public class Contour implements DstvElement {
         this.type = type;
     }
 
-    public static List<Contour> createContList(List<DstvContourPoint> pointList, ContourType type) throws DstvParseEx {
+    public static List<Contour> createSeveralContours(List<DstvContourPoint> pointList, ContourType type) throws DstvParseEx {
         List<Contour> outList = new ArrayList<>();
+
+        if (!type.closedOnly) {
+            outList.add(new Contour(pointList, type));
+            return outList;
+        }
+
         DstvContourPoint first = pointList.get(0);
         int firstIndex = 0;
         int lastIndex = 0;
@@ -33,7 +39,7 @@ public class Contour implements DstvElement {
                 }
                 if (i == firstIndex) {
                     System.out.println("Warning: first point of contour haven't flange mark, mark will be taken " +
-                            "from previous contour");
+                            "from previous contour in section");
                 }
                 pointList.get(i).setFlCode(pointList.get(i - 1).getFlCode());
             }

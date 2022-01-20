@@ -16,84 +16,88 @@ public class DstvComponentParser {
 
     public List<DstvElement> getElemList() {
 
+        List<DstvElement> outputList = new ArrayList<>();
+        Map<String, List<List<String>>> elemMap = getElemMap();
+
         //holes & slots
-        List<DstvElement> outList = new ArrayList<>();
-        Map<String, List<String>> elemMap = getElemMap();
-        List<String> holeList = elemMap.get("BO");
-        if (holeList != null) {
-            for (String holeSigh : holeList) {
-                try {
-                    outList.add(DstvHole.createHole(holeSigh));
-                } catch (DstvParseEx DStV_parseEx) {
-                    DStV_parseEx.printStackTrace();
+        List<List<String>> holeBlocks = elemMap.get("BO");
+        if (holeBlocks != null) {
+            for (List<String> holeList : holeBlocks) {
+                for (String holeNote : holeList) {
+                    try {
+                        outputList.add(DstvHole.createHole(holeNote));
+                    } catch (DstvParseEx DStV_parseEx) {
+                        DStV_parseEx.printStackTrace();
+                    }
                 }
             }
         }
 
-        //TODO отображать либо точки, либо контуры. Возможно, добавляя контур, нужно удалять вошедшие в него точки
+        //TODO добавлять либо точки, либо контуры. Возможно, добавляя контур, нужно удалять вошедшие в него точки
         //outer contours
-        List<String> outerPointNotes = elemMap.get(Contour.ContourType.AK.signature);
-        addContoursByType(outList, outerPointNotes, Contour.ContourType.AK);
+        List<List<String>> outerBorders = elemMap.get(Contour.ContourType.AK.signature);
+        addContoursByType(outputList, outerBorders, Contour.ContourType.AK);
 
         //inner contours
-        List<String> innerPointNotes = elemMap.get(Contour.ContourType.IK.signature);
-        addContoursByType(outList, innerPointNotes, Contour.ContourType.IK);
+        List<List<String>> innerBorders = elemMap.get(Contour.ContourType.IK.signature);
+        addContoursByType(outputList, innerBorders, Contour.ContourType.IK);
 
         //powder contours
-        List<String> powderPointNotes = elemMap.get(Contour.ContourType.PU.signature);
-        addContoursByType(outList, powderPointNotes, Contour.ContourType.PU);
+        List<List<String>> powderPointNotes = elemMap.get(Contour.ContourType.PU.signature);
+        addContoursByType(outputList, powderPointNotes, Contour.ContourType.PU);
 
         //punch contours
-        List<String> punchPointNotes = elemMap.get(Contour.ContourType.KO.signature);
-        addContoursByType(outList, punchPointNotes, Contour.ContourType.KO);
+        List<List<String>> punchPointNotes = elemMap.get(Contour.ContourType.KO.signature);
+        addContoursByType(outputList, punchPointNotes, Contour.ContourType.KO);
 
         //numeration
-        List<String> numerationSignList = elemMap.get("SI");
-        if (numerationSignList != null) {
-            for (String numSigh : numerationSignList) {
-                try {
-                    outList.add(DstvNumeration.createNumeration(numSigh));
-                } catch (DstvParseEx DStV_parseEx) {
-                    DStV_parseEx.printStackTrace();
+        List<List<String>> numerationBlocks = elemMap.get("SI");
+        if (numerationBlocks != null) {
+            for (List<String> numList : numerationBlocks) {
+                for (String numNote : numList) {
+                    try {
+                        outputList.add(DstvNumeration.createNumeration(numNote));
+                    } catch (DstvParseEx DStV_parseEx) {
+                        DStV_parseEx.printStackTrace();
+                    }
                 }
             }
         }
 
         //bends
-        List<String> bendLinesList = elemMap.get("KA");
-        if (bendLinesList != null) {
-            for (String bendLine : bendLinesList) {
-                try {
-                    outList.add(DstvBend.createBend(bendLine));
-                } catch (DstvParseEx dstvParseEx) {
-                    dstvParseEx.printStackTrace();
+        List<List<String>> bendBlocks = elemMap.get("KA");
+        if (bendBlocks != null) {
+            for (List<String> bendList : bendBlocks) {
+                for (String bendNote : bendList) {
+                    try {
+                        outputList.add(DstvBend.createBend(bendNote));
+                    } catch (DstvParseEx dstvParseEx) {
+                        dstvParseEx.printStackTrace();
+                    }
                 }
             }
         }
-        return outList;
+        return outputList;
     }
 
-    private void addContoursByType(List<DstvElement> outListTo,
-                                   List<String> pointNoteList,
+    private void addContoursByType(List<DstvElement> outElemList,
+                                   List<List<String>> notesBlockList,
                                    Contour.ContourType type) {
-        if (pointNoteList != null) {
-            int startPoint = outListTo.size();
-            for (String pointSigh : pointNoteList) {
+
+        if (notesBlockList == null) return;
+
+        for (List<String> noteList : notesBlockList) {
+            List<DstvContourPoint> localList = new ArrayList<>();
+            for (String pointNote : noteList) {
                 try {
-                    outListTo.add(DstvContourPoint.createPoint(pointSigh));
+                    localList.add(DstvContourPoint.createPoint(pointNote));
                 } catch (DstvParseEx DStV_parseEx) {
                     DStV_parseEx.printStackTrace();
                 }
             }
 
-            int endPoint = outListTo.size() - 1;
-            List<DstvContourPoint> contoursPoints = new ArrayList<>();
-            for (int i = startPoint; i <= endPoint; i++) {
-                contoursPoints.add((DstvContourPoint) outListTo.get(i));
-            }
-
             try {
-                outListTo.addAll(Contour.createContList(contoursPoints, type));
+                outElemList.addAll(Contour.createSeveralContours(localList, type));
             } catch (DstvParseEx dstvParseEx) {
                 dstvParseEx.printStackTrace();
             }
@@ -101,19 +105,20 @@ public class DstvComponentParser {
     }
 
     /**
-     * Получаем карту "тип элемента - список data-line типа"
+     * Получаем карту "тип элемента - список списков data-line для этого типа"
      *
      * @return
      */
-    private Map<String, List<String>> getElemMap() {
-        Map<String, List<String>> elemMap = new HashMap<>();
+    private Map<String, List<List<String>>> getElemMap() {
+        Map<String, List<List<String>>> elemMap = new HashMap<>();
         try (BufferedReader reader =
                      new BufferedReader(new InputStreamReader(new FileInputStream(file), "CP1251"))) {
 
             String curKey = null;
             String line = reader.readLine();
             while (line != null) {
-                //if has END-mark
+                //if has END-mark.
+                // Maybe to be refactored for multi-peace file processing
                 if (line.equals("EN")) break;
 
                 //if has quote-sign
@@ -132,6 +137,7 @@ public class DstvComponentParser {
                     if (!elemMap.containsKey(curKey)) {
                         elemMap.put(curKey, new ArrayList<>());
                     }
+                    elemMap.get(curKey).add(new ArrayList<>());
 
                     line = reader.readLine();
                     continue;
@@ -142,7 +148,8 @@ public class DstvComponentParser {
                     continue;
                 }
 
-                elemMap.get(curKey).add(line);
+                List<List<String>> outerList = elemMap.get(curKey);
+                outerList.get(outerList.size() - 1).add(line);
                 //получаем новую строку
                 line = reader.readLine();
             }
