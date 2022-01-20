@@ -14,7 +14,7 @@ public class DstvContourPoint extends LocatedElem implements DstvElement {
 
     @SuppressWarnings("Duplicates")
     public static DstvContourPoint createPoint(String DStVSign) throws DstvParseEx {
-        String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.fineSplitter);
+        String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.FINE_SPLITTER);
 
         //temporary flange-code in case of missing a signature in line
         String flCode = "x";
@@ -25,7 +25,7 @@ public class DstvContourPoint extends LocatedElem implements DstvElement {
             flCode = separated[0];
         }
 
-        //удаляем все кроме чисел и разделительной точки
+        //удаляем все кроме чисел, разделительной точки и знака "hyphen" (играет роль минуса для числа)
         for (int i = 0; i < separated.length; i++) {
             separated[i] = separated[i].replaceAll("([^.\\d-]+)", "");
         }

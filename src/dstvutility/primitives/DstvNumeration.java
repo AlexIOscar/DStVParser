@@ -3,6 +3,7 @@ package dstvutility.primitives;
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.parsecore.DstvComponentParser;
 
+@SuppressWarnings("SpellCheckingInspection")
 public class DstvNumeration extends LocatedElem implements DstvElement {
 
     final double angle;
@@ -18,7 +19,7 @@ public class DstvNumeration extends LocatedElem implements DstvElement {
 
     @SuppressWarnings("Duplicates")
     public static DstvNumeration createNumeration(String dstvLine) throws DstvParseEx {
-        String[] separated = DstvElement.getDataVector(dstvLine, DstvComponentParser.positionNumSplitter);
+        String[] separated = DstvElement.getDataVector(dstvLine, DstvComponentParser.POSITION_NUM_SPLITTER);
         //temporary flange-code in case of missing a signature in line
         String flCode = "x";
 
@@ -26,7 +27,7 @@ public class DstvNumeration extends LocatedElem implements DstvElement {
             flCode = separated[1];
         }
 
-        //TODO удаляем все кроме чисел и разделительной точки
+        //удаляем все кроме чисел, разделительной точки и знака "hyphen" (играет роль минуса для числа)
         for (int i = 0; i < separated.length - 1; i++) {
             separated[i] = separated[i].replaceAll("([^.\\d-]+)", "");
         }
@@ -47,13 +48,13 @@ public class DstvNumeration extends LocatedElem implements DstvElement {
 
     @Override
     public String toString() {
-        return "DstvNumeration{" +
-                "angle=" + angle +
-                ", letterHeight=" + letterHeight +
-                ", text='" + text + '\'' +
-                ", flCode='" + flCode + '\'' +
+        return "DstvNumeration{"+
+                " flCode='" + flCode + '\'' +
                 ", xCoord=" + xCoord +
                 ", yCoord=" + yCoord +
+                ", angle=" + angle +
+                ", letterHeight=" + letterHeight +
+                ", text='" + text + '\'' +
                 '}';
     }
 }

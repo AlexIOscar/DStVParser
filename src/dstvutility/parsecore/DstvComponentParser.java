@@ -1,10 +1,7 @@
 package dstvutility.parsecore;
 
 import dstvutility.miscellaneous.DstvParseEx;
-import dstvutility.primitives.DstvContourPoint;
-import dstvutility.primitives.DstvElement;
-import dstvutility.primitives.DstvHole;
-import dstvutility.primitives.DstvNumeration;
+import dstvutility.primitives.*;
 import dstvutility.primitives.synthetic.Contour;
 
 import java.io.*;
@@ -18,6 +15,8 @@ public class DstvComponentParser {
     }
 
     public List<DstvElement> getElemList() {
+
+        //holes & slots
         List<DstvElement> outList = new ArrayList<>();
         Map<String, List<String>> elemMap = getElemMap();
         List<String> holeList = elemMap.get("BO");
@@ -31,31 +30,24 @@ public class DstvComponentParser {
             }
         }
 
-        List<String> outerPointSignList = elemMap.get("AK");
+        //TODO отображать либо точки, либо контуры. Возможно, добавляя контур, нужно удалять вошедшие в него точки
+        //outer contours
+        List<String> outerPointNotes = elemMap.get(Contour.ContourType.AK.signature);
+        addContoursByType(outList, outerPointNotes, Contour.ContourType.AK);
 
-        if (outerPointSignList != null) {
-            int startPoint = outList.size();
-            for (String pointSigh : outerPointSignList) {
-                try {
-                    outList.add(DstvContourPoint.createPoint(pointSigh));
-                } catch (DstvParseEx DStV_parseEx) {
-                    DStV_parseEx.printStackTrace();
-                }
-            }
+        //inner contours
+        List<String> innerPointNotes = elemMap.get(Contour.ContourType.IK.signature);
+        addContoursByType(outList, innerPointNotes, Contour.ContourType.IK);
 
-            int endPoint = outList.size() - 1;
-            List<DstvContourPoint> contoursPoints = new ArrayList<>();
-            for (int i = startPoint; i <= endPoint; i++) {
-                contoursPoints.add((DstvContourPoint) outList.get(i));
-            }
+        //powder contours
+        List<String> powderPointNotes = elemMap.get(Contour.ContourType.PU.signature);
+        addContoursByType(outList, powderPointNotes, Contour.ContourType.PU);
 
-            try {
-                outList.addAll(Contour.createContList(contoursPoints, Contour.ContourType.AK));
-            } catch (DstvParseEx dstvParseEx) {
-                dstvParseEx.printStackTrace();
-            }
-        }
+        //punch contours
+        List<String> punchPointNotes = elemMap.get(Contour.ContourType.KO.signature);
+        addContoursByType(outList, punchPointNotes, Contour.ContourType.KO);
 
+        //numeration
         List<String> numerationSignList = elemMap.get("SI");
         if (numerationSignList != null) {
             for (String numSigh : numerationSignList) {
@@ -66,7 +58,46 @@ public class DstvComponentParser {
                 }
             }
         }
+
+        //bends
+        List<String> bendLinesList = elemMap.get("KA");
+        if (bendLinesList != null) {
+            for (String bendLine : bendLinesList) {
+                try {
+                    outList.add(DstvBend.createBend(bendLine));
+                } catch (DstvParseEx dstvParseEx) {
+                    dstvParseEx.printStackTrace();
+                }
+            }
+        }
         return outList;
+    }
+
+    private void addContoursByType(List<DstvElement> outListTo,
+                                   List<String> pointNoteList,
+                                   Contour.ContourType type) {
+        if (pointNoteList != null) {
+            int startPoint = outListTo.size();
+            for (String pointSigh : pointNoteList) {
+                try {
+                    outListTo.add(DstvContourPoint.createPoint(pointSigh));
+                } catch (DstvParseEx DStV_parseEx) {
+                    DStV_parseEx.printStackTrace();
+                }
+            }
+
+            int endPoint = outListTo.size() - 1;
+            List<DstvContourPoint> contoursPoints = new ArrayList<>();
+            for (int i = startPoint; i <= endPoint; i++) {
+                contoursPoints.add((DstvContourPoint) outListTo.get(i));
+            }
+
+            try {
+                outListTo.addAll(Contour.createContList(contoursPoints, type));
+            } catch (DstvParseEx dstvParseEx) {
+                dstvParseEx.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -76,8 +107,8 @@ public class DstvComponentParser {
      */
     private Map<String, List<String>> getElemMap() {
         Map<String, List<String>> elemMap = new HashMap<>();
-        try (InputStreamReader isr = new InputStreamReader(new FileInputStream(file), "CP1251")) {
-            BufferedReader reader = new BufferedReader(isr);
+        try (BufferedReader reader =
+                     new BufferedReader(new InputStreamReader(new FileInputStream(file), "CP1251"))) {
 
             String curKey = null;
             String line = reader.readLine();
@@ -91,8 +122,12 @@ public class DstvComponentParser {
                     continue;
                 }
 
-                if (checkIfMark(line)) {
+                if (checkCodeLine(line)) {
                     curKey = line;
+
+                    if (!checkIfMark(line)) {
+                        System.out.println("Warning: unregistered DStV code-line detected: " + line);
+                    }
 
                     if (!elemMap.containsKey(curKey)) {
                         elemMap.put(curKey, new ArrayList<>());
@@ -111,7 +146,6 @@ public class DstvComponentParser {
                 //получаем новую строку
                 line = reader.readLine();
             }
-            reader.close();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
@@ -126,8 +160,19 @@ public class DstvComponentParser {
      */
     private boolean checkIfMark(String str) {
         //there are some more patterns in DStV, but they are too seldom and/or is not necessary yet
-        return str.matches("^BO$|^SI$|^AK$|^IK$|^PU$|^KO$|^SC$|^UE$|^KA$|^EN$|" +
+        return str.matches("^BO$|^SI$|^AK$|^IK$|^PU$|^KO$|^SC$|^UE$|^KA$|^EN$|^ST$|" +
                 "^E[0-9]$|^B[0-9]$|^S[0-9]$|^A[0-9]$|^I[0-9]$|^P[0-9]$|^K[0-9]$");
+    }
+
+    /**
+     * Возвращает true, если строка начинается с любой комбинации заглавных латинских букв или десятичных цифр в
+     * количестве ровно двух.
+     *
+     * @param str любая строка-претендент
+     * @return matching result
+     */
+    private boolean checkCodeLine(String str) {
+        return str.matches("^[A-Z0-9]{2}$");
     }
 
     /*
@@ -138,14 +183,14 @@ public class DstvComponentParser {
     /**
      * Splitter for full carefully splitting - saving all lexemes
      */
-    public static Splitter fineSplitter = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)|(?<=[\\d\\w.]) +");
+    public static final Splitter FINE_SPLITTER = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)|(?<=[\\d\\w.]) +");
 
     /**
      * Splitter for rough splitting - delete letter-sequence lexemes between two digits (without additional spaces)
      */
-    public static Splitter roughSplitter = str -> str.split("(?<!\\s|\\D)[a-z]+(?!\\s+|\\D)|\\s+");
+    public static final Splitter ROUGH_SPLITTER = str -> str.split("(?<!\\s|\\D)[a-z]+(?!\\s+|\\D)|\\s+");
 
-    public static Splitter positionNumSplitter = str -> {
+    public static final Splitter POSITION_NUM_SPLITTER = str -> {
         List<String> outList = new ArrayList<>();
         outList.add(str.substring(0, 2));
         outList.add(str.substring(2, 3));
@@ -163,7 +208,7 @@ public class DstvComponentParser {
      * Вытаскивает подстроки, представляющие числа, с фиксированным количеством знаков целого и десятичного
      * представления от точки. Прототип, не доработан
      */
-    private static Splitter dotSplitter = str -> {
+    public static final Splitter DOT_SPLITTER = str -> {
         int intDigits = 4;
         int n = 3;
         int[] dotPoss = new int[n];
@@ -172,7 +217,7 @@ public class DstvComponentParser {
             if (i > 0) {
                 prevPos = dotPoss[i - 1];
             }
-            dotPoss[i] = str.indexOf(".", prevPos);
+            dotPoss[i] = str.indexOf(".", prevPos + 1);
         }
         String[] outArr = new String[n];
         for (int i = 0; i < n; i++) {

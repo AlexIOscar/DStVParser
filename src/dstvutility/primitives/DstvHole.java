@@ -25,7 +25,7 @@ public class DstvHole extends LocatedElem implements DstvElement {
     }
 
     public static DstvHole createHole(String DStVSign) throws DstvParseEx {
-        String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.fineSplitter);
+        String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.FINE_SPLITTER);
         separated[0] = separated[0].trim();
 
         //проверяем что первая лексема - валидный код фланца. Если нет, то будет получено исключение.
@@ -33,7 +33,7 @@ public class DstvHole extends LocatedElem implements DstvElement {
             throw new DstvParseEx("Illegal flange code signature in BO data line");
         }
 
-        //удаляем все кроме чисел и разделительной точки, во всех блоках (кроме метки фланца)
+        //удаляем все кроме чисел, разделительной точки и знака "hyphen" (играет роль минуса для числа)
         for (int i = 1; i < separated.length; i++) {
             separated[i] = separated[i].replaceAll("([^.\\d-]+)", "");
         }

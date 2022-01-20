@@ -13,7 +13,7 @@ public class Contour implements DstvElement {
     ContourType type;
 
     private Contour(List<DstvContourPoint> pointList, ContourType type) throws DstvParseEx {
-        if (!pointList.get(0).equals(pointList.get(pointList.size() - 1))) {
+        if (type.closedOnly && !pointList.get(0).equals(pointList.get(pointList.size() - 1))) {
             throw new DstvParseEx("Attempt to create open contour. Operation will abort");
         }
         this.pointList = pointList;
@@ -48,6 +48,10 @@ public class Contour implements DstvElement {
                 }
                 first = pointList.get(firstIndex);
             }
+
+            if (i == pointList.size() - 1) {
+                System.out.println("Warning: there are non-closed part of points in end of contour section");
+            }
         }
         return outList;
     }
@@ -61,6 +65,17 @@ public class Contour implements DstvElement {
     }
 
     public enum ContourType {
-        AK, IK
+        AK("AK", true),
+        IK("IK", true),
+        PU("PU", false),
+        KO("KO", false);
+
+        public final String signature;
+        public final boolean closedOnly;
+
+        ContourType(String signature, boolean closedOnly) {
+            this.signature = signature;
+            this.closedOnly = closedOnly;
+        }
     }
 }
