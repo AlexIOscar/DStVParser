@@ -64,7 +64,7 @@ public class Contour implements DstvElement {
 
     @Override
     public String toString() {
-        return "Contour{" +
+        return type + "-Contour{" +
                 "pointListSize=" + pointList.size() +
                 ", type=" + type +
                 '}';

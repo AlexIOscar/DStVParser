@@ -1,10 +1,13 @@
 package dstvutility.parsecore;
 
+import dstvutility.miscellaneous.DstvNativeFactory;
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.primitives.*;
 import dstvutility.primitives.synthetic.Contour;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 public class DstvComponentParser {
@@ -33,7 +36,6 @@ public class DstvComponentParser {
             }
         }
 
-        //TODO добавлять либо точки, либо контуры. Возможно, добавляя контур, нужно удалять вошедшие в него точки
         //outer contours
         List<List<String>> outerBorders = elemMap.get(Contour.ContourType.AK.signature);
         addContoursByType(outputList, outerBorders, Contour.ContourType.AK);
@@ -77,6 +79,20 @@ public class DstvComponentParser {
                 }
             }
         }
+
+        //cuts
+        List<List<String>> cutBlocks = elemMap.get("SC");
+        if (cutBlocks != null) {
+            for (List<String> cutList : cutBlocks) {
+                for (String cutNote : cutList) {
+                    try {
+                        outputList.add(DstvCut.createCut(cutNote));
+                    } catch (DstvParseEx dstvParseEx) {
+                        dstvParseEx.printStackTrace();
+                    }
+                }
+            }
+        }
         return outputList;
     }
 
@@ -104,10 +120,28 @@ public class DstvComponentParser {
         }
     }
 
+    //Factory. Not used yet because it may cause performance loss
+    // It have to be replaced with cache "Class <-> factory-meth" once to be invoked in start of business
+    @SuppressWarnings("unchecked")
+    private <T> T getNative(String dataNote, Class<T> repClass) throws DstvParseEx, InvocationTargetException, IllegalAccessException {
+        Method targetMeth = null;
+        Method[] metArr = repClass.getDeclaredMethods();
+        for (Method met : metArr) {
+            if (met.isAnnotationPresent(DstvNativeFactory.class)) {
+                targetMeth = met;
+                break;
+            }
+        }
+        if (targetMeth == null) {
+            throw new DstvParseEx("No factory method in native primitive class");
+        }
+        return (T) targetMeth.invoke(repClass, dataNote);
+    }
+
     /**
      * Получаем карту "тип элемента - список списков data-line для этого типа"
      *
-     * @return
+     * @return element map
      */
     private Map<String, List<List<String>>> getElemMap() {
         Map<String, List<List<String>>> elemMap = new HashMap<>();
@@ -121,7 +155,7 @@ public class DstvComponentParser {
                 // Maybe to be refactored for multi-peace file processing
                 if (line.equals("EN")) break;
 
-                //if has quote-sign
+                //if has quote-mark
                 if (line.matches("^\\*\\*.*")) {
                     line = reader.readLine();
                     continue;
@@ -190,7 +224,8 @@ public class DstvComponentParser {
     /**
      * Splitter for full carefully splitting - saving all lexemes
      */
-    public static final Splitter FINE_SPLITTER = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)|(?<=[\\d\\w.]) +");
+    public static final Splitter FINE_SPLITTER = str -> str.split("(?<=\\d)(?=[a-z])|(?<=[a-z])(?=\\d)|" +
+            "(?<=[\\d\\w.]) +");
 
     /**
      * Splitter for rough splitting - delete letter-sequence lexemes between two digits (without additional spaces)
@@ -218,6 +253,7 @@ public class DstvComponentParser {
     public static final Splitter DOT_SPLITTER = str -> {
         int intDigits = 4;
         int n = 3;
+
         int[] dotPoss = new int[n];
         for (int i = 0; i < n; i++) {
             int prevPos = 0;
@@ -230,12 +266,12 @@ public class DstvComponentParser {
         for (int i = 0; i < n; i++) {
             outArr[i] = str.substring(dotPoss[i] - intDigits, dotPoss[i] + 2);
         }
+
         return outArr;
     };
 
     /**
-     * кривовато... возможно потеря перформанса
-     *
+     * кривовато... возможна потеря перформанса (перелив в лист и обратно)
      * @param toBeRefined String array to be refined from voids (empty strings)
      * @return Refined array
      */

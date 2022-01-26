@@ -17,11 +17,15 @@ public interface DstvElement {
             throw new DstvParseEx("Illegal start sequence in data line (must starts with \"  \")");
         }
 
-       // DStVSign = DStVSign.trim();
+       //DStVSign = DStVSign.trim();
         return splitter.split(DStVSign);
     }
 
     static boolean validateFlange(String flDependMark) {
         return flDependMark.matches("[ovuh]");
+    }
+
+    static <T> T getElement(String dataLine){
+        return null;
     }
 }

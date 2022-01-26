@@ -3,7 +3,7 @@ package dstvutility.primitives;
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.parsecore.DstvComponentParser;
 
-//@SuppressWarnings("SpellCheckingInspection")
+@SuppressWarnings("SpellCheckingInspection")
 public class DstvBend implements DstvElement {
     public final double originX;
     public final double originY;
@@ -21,20 +21,21 @@ public class DstvBend implements DstvElement {
         this.bendingRadius = bendingRadius;
     }
 
+    @SuppressWarnings("Duplicates")
     public static DstvBend createBend(String bendDataLine) throws DstvParseEx {
         String[] separated = DstvElement.getDataVector(bendDataLine, DstvComponentParser.FINE_SPLITTER);
 
         //удаляем все кроме чисел, разделительной точки и знака "hyphen" (играет роль минуса для числа)
         //согласно стандарту, в этом типе код-линий и так не допускается никаких символов, не относящихся к числам,
         // так что здесь это "на всякий случай"
-        for (int i = 1; i < separated.length; i++) {
+        for (int i = 0; i < separated.length; i++) {
             separated[i] = separated[i].replaceAll("([^.\\d-]+)", "");
         }
 
         separated = DstvComponentParser.removeVoids(separated);
 
         if (separated.length < 6) {
-            throw new DstvParseEx("Illegal data vector format (BO): too short");
+            throw new DstvParseEx("Illegal data vector format (KA): too short");
         }
 
         double orX = Double.parseDouble(separated[0]);

@@ -1,5 +1,6 @@
 package dstvutility.primitives;
 
+import dstvutility.miscellaneous.DstvNativeFactory;
 import dstvutility.miscellaneous.DstvParseEx;
 import dstvutility.parsecore.DstvComponentParser;
 
@@ -24,6 +25,7 @@ public class DstvHole extends LocatedElem implements DstvElement {
         }
     }
 
+    @DstvNativeFactory
     public static DstvHole createHole(String DStVSign) throws DstvParseEx {
         String[] separated = DstvElement.getDataVector(DStVSign, DstvComponentParser.FINE_SPLITTER);
         separated[0] = separated[0].trim();
