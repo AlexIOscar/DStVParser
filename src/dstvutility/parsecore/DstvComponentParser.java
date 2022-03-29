@@ -272,6 +272,7 @@ public class DstvComponentParser {
 
     /**
      * кривовато... возможна потеря перформанса (перелив в лист и обратно)
+     *
      * @param toBeRefined String array to be refined from voids (empty strings)
      * @return Refined array
      */
@@ -280,5 +281,68 @@ public class DstvComponentParser {
         tempList.removeAll(Collections.singleton(""));
         toBeRefined = tempList.toArray(new String[]{});
         return toBeRefined;
+    }
+
+    public String fixDstvFile() {
+        StringBuilder fixedText = new StringBuilder();
+        try (BufferedReader reader =
+                     new BufferedReader(new InputStreamReader(new FileInputStream(file), "CP1251"))) {
+            boolean inFixBlock = false;
+            String codeBlock = "";
+            String line = reader.readLine();
+            while (line != null) {
+                if (checkCodeLine(line)) {
+                    inFixBlock = checkForFix(line);
+                    codeBlock = line;
+                    fixedText.append(line).append('\n');
+                    line = reader.readLine();
+                    continue;
+                }
+
+                if (inFixBlock) {
+                    StringBuilder sb = new StringBuilder(line);
+                    sb.delete(3, 5).delete(13, 14);
+                    if (codeBlock.equals("BO")) {
+                        sb.delete(23, 27);
+                        if (sb.length() == 29) {
+                            sb.append("   0.00");
+                        } else {
+                            sb.delete(29, 33);
+                        }
+                    }
+
+                    if (codeBlock.equals("SI")) {
+                        sb.delete(3, 4).delete(12, 13);
+                    }
+
+                    // CAUTION! В результате работы блока ниже все данные о фасках будут удалены. Если необходимо
+                    // сохранять данные о фасках, требуется переработать блок.
+                    if (codeBlock.equals("AK") || codeBlock.equals("IK")) {
+                        sb.delete(23, 27).delete(29, sb.length());
+                    }
+                    fixedText.append(sb).append('\n');
+                } else {
+                    fixedText.append(line).append('\n');
+                }
+
+                //получаем новую строку
+                line = reader.readLine();
+            }
+
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+        return fixedText.toString();
+    }
+
+    /**
+     * Возвращает true если строка является меткой блока DStV-кода
+     *
+     * @param str любая строка-претендент
+     * @return matching result
+     */
+    private boolean checkForFix(String str) {
+        //there are some more patterns in DStV, but they are too seldom and/or is not necessary yet
+        return str.matches("^BO$|^SI$|^AK$|^IK$");
     }
 }

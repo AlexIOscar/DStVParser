@@ -48,7 +48,7 @@ public class DstvNumeration extends LocatedElem implements DstvElement {
 
     @Override
     public String toString() {
-        return "DstvNumeration{"+
+        return "DstvNumeration {"+
                 " flCode='" + flCode + '\'' +
                 ", xCoord=" + xCoord +
                 ", yCoord=" + yCoord +
