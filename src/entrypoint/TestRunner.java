@@ -4,10 +4,7 @@ import dstvutility.parsecore.DstvComponentParser;
 import dstvutility.primitives.DstvElement;
 
 import javax.swing.*;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.util.List;
 
 public class TestRunner {
@@ -22,7 +19,7 @@ public class TestRunner {
         }
 
         if (file.exists()) {
-            System.out.println("file " + file.getName() + " finded");
+            System.out.println("file " + file.getName() + " found");
         }
 
         DstvComponentParser dcp = new DstvComponentParser(file);
@@ -34,12 +31,39 @@ public class TestRunner {
         }
         */
 
+
+        /*
         String out = dcp.fixDstvFile();
         System.out.println(out);
         try (BufferedWriter bw = new BufferedWriter(new FileWriter("dstvOut.nc"))) {
             bw.write(out);
         } catch (IOException ex) {
             System.out.println(ex.getMessage());
+        }
+         */
+
+
+
+        File folder = new File("C:\\Users\\Aleksey\\Desktop\\dstv\\2022 02 01 ProNC");
+        File[] files = folder.listFiles();
+        if (files == null) {
+            return;
+        }
+        int outIndex = 0;
+        for (File f : files) {
+            outIndex++;
+            DstvComponentParser parser = new DstvComponentParser(f);
+            String fixed = parser.fixDstvFile();
+            String outFileAddr = f.getAbsolutePath().replaceAll("ProNC", "ProNC_Repaired");
+
+            try (BufferedWriter bw =new BufferedWriter
+                    (new OutputStreamWriter(new FileOutputStream(outFileAddr), "CP1251"))) {
+                bw.write(fixed);
+            } catch (IOException ex) {
+                System.out.println(ex.getMessage());
+            }
+
+            System.out.println("File #" + outIndex + ": " + f + " repaired");
         }
     }
 }

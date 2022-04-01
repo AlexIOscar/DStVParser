@@ -289,9 +289,11 @@ public class DstvComponentParser {
                      new BufferedReader(new InputStreamReader(new FileInputStream(file), "CP1251"))) {
             boolean inFixBlock = false;
             String codeBlock = "";
+            char codeShelf = ' ';
             String line = reader.readLine();
             while (line != null) {
                 if (checkCodeLine(line)) {
+                    codeShelf = ' ';
                     inFixBlock = checkForFix(line);
                     codeBlock = line;
                     fixedText.append(line).append('\n');
@@ -300,7 +302,20 @@ public class DstvComponentParser {
                 }
 
                 if (inFixBlock) {
+                    if (line.length() == 0) {
+                        line = reader.readLine();
+                        continue;
+                    }
+
+                    char localCodeShelf = line.charAt(2);
+                    if (localCodeShelf == ' ') {
+                        localCodeShelf = codeShelf;
+                    } else {
+                        codeShelf = localCodeShelf;
+                    }
+
                     StringBuilder sb = new StringBuilder(line);
+                    sb.replace(2,3, String.valueOf(localCodeShelf));
                     sb.delete(3, 5).delete(13, 14);
                     if (codeBlock.equals("BO")) {
                         sb.delete(23, 27);
